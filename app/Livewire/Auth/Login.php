@@ -3,6 +3,10 @@
 namespace App\Livewire\Auth;
 
 use Livewire\Component;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
+use App\Models\User;
+
 
 class Login extends Component
 {
@@ -16,13 +20,17 @@ class Login extends Component
         ]);
 
         try {
-            if (auth()->attempt(['email' => $this->email, 'password' => $this->password])) {
-                session()->flash('message', 'Login successful!');
-                return redirect()->route('register');
-            } else {
-                session()->flash('error', 'Invalid email or password.');
-                return false;
+            $user = User::where('email', $this->email)->first();
+
+            if (!$user || !Auth::attempt(['email' => $this->email, 'password' => $this->password])) {
+                throw ValidationException::withMessages([
+                    'email' => ['The provided credentials are incorrect.'],
+                ]);
             }
+
+            Auth::login($user);
+            return redirect()->route('accueil')->with('success', 'Login successful!');
+            
         } catch (\Throwable $th) {
             session()->flash('error', 'An error occurred during login. Please try again.');
             return false;
